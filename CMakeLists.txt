@@ -102,6 +102,8 @@ option(HTTPLIB_TEST "Enables testing and builds tests" OFF)
 option(HTTPLIB_REQUIRE_BROTLI "Requires Brotli to be found & linked, or fails build." OFF)
 option(HTTPLIB_USE_BROTLI_IF_AVAILABLE "Uses Brotli (if available) to enable Brotli decompression support." ON)
 option(HTTPLIB_USE_CERTS_FROM_MACOSX_KEYCHAIN "Enable feature to load system certs from the Apple Keychain." ON)
+option(HTTPLIB_REQUIRE_ZSTD "Requires ZSTD to be found & linked, or fails build." ON)
+option(HTTPLIB_USE_ZSTD_IF_AVAILABLE "Uses ZSTD (if available) to enable Brotli decompression support." ON)
 # Defaults to static library
 option(BUILD_SHARED_LIBS "Build the library as a shared library instead of static. Has no effect if using header-only." OFF)
 if (BUILD_SHARED_LIBS AND WIN32 AND HTTPLIB_COMPILE)
@@ -149,6 +151,17 @@ endif()
 
 if(HTTPLIB_USE_CERTS_FROM_MACOSX_KEYCHAIN)
 	set(HTTPLIB_IS_USING_CERTS_FROM_MACOSX_KEYCHAIN TRUE)
+endif()
+
+if(HTTPLIB_REQUIRE_ZSTD)
+	find_package(ZSTD REQUIRED)
+	set(HTTPLIB_IS_USING_ZSTD TRUE)
+elseif(HTTPLIB_USE_ZLIB_IF_AVAILABLE)
+	find_package(ZSTD QUIET)
+	# FindZLIB doesn't have a ZLIB_FOUND variable, so check the target.
+	if(TARGET ZSTD::ZSTD)
+		set(HTTPLIB_IS_USING_ZSTD TRUE)
+	endif()
 endif()
 
 # Used for default, common dirs that the end-user can change (if needed)
@@ -226,6 +239,7 @@ target_link_libraries(${PROJECT_NAME} ${_INTERFACE_OR_PUBLIC}
 		$<$<BOOL:${HTTPLIB_IS_USING_BROTLI}>:Brotli::encoder>
 		$<$<BOOL:${HTTPLIB_IS_USING_BROTLI}>:Brotli::decoder>
 		$<$<BOOL:${HTTPLIB_IS_USING_ZLIB}>:ZLIB::ZLIB>
+		$<$<BOOL:${HTTPLIB_IS_USING_ZSTD}>:ZSTD::ZSTD>
 		$<$<BOOL:${HTTPLIB_IS_USING_OPENSSL}>:OpenSSL::SSL>
 		$<$<BOOL:${HTTPLIB_IS_USING_OPENSSL}>:OpenSSL::Crypto>
 )
@@ -235,6 +249,7 @@ target_compile_definitions(${PROJECT_NAME} ${_INTERFACE_OR_PUBLIC}
 	$<$<BOOL:${HTTPLIB_NO_EXCEPTIONS}>:CPPHTTPLIB_NO_EXCEPTIONS>
 	$<$<BOOL:${HTTPLIB_IS_USING_BROTLI}>:CPPHTTPLIB_BROTLI_SUPPORT>
 	$<$<BOOL:${HTTPLIB_IS_USING_ZLIB}>:CPPHTTPLIB_ZLIB_SUPPORT>
+	$<$<BOOL:${HTTPLIB_IS_USING_ZSTD}>:CPPHTTPLIB_ZSTD_SUPPORT>
 	$<$<BOOL:${HTTPLIB_IS_USING_OPENSSL}>:CPPHTTPLIB_OPENSSL_SUPPORT>
 	$<$<AND:$<PLATFORM_ID:Darwin>,$<BOOL:${HTTPLIB_IS_USING_OPENSSL}>,$<BOOL:${HTTPLIB_IS_USING_CERTS_FROM_MACOSX_KEYCHAIN}>>:CPPHTTPLIB_USE_CERTS_FROM_MACOSX_KEYCHAIN>
 )
